@@ -1,0 +1,23 @@
+ zypper install ftp://ftp.pbone.net/mirror/ftp5.gwdg.de/pub/opensuse/repositories/Application:/Geo/openSUSE_12.2/x86_64/python-numpy-1.7.1-97.1.x86_64.rpm
+ zypper install ftp://ftp.pbone.net/mirror/ftp5.gwdg.de/pub/opensuse/repositories/Application:/Geo/openSUSE_12.2/x86_64/python-numpy-devel-1.7.1-97.1.x86_64.rpm
+ easy_install cython
+ easy_install numexpr scikit-image
+
+
+ pip install mpi4py
+ edit the mpi.cfg in the directory pip created 
+ and change the config to:
+
+ mpi_dir              = /usr/lib64/mpi/gcc/openmpi
+ mpicc                = %(mpi_dir)s/bin/mpicc
+ mpicxx               = %(mpi_dir)s/bin/mpicxx
+#include_dirs         = %(mpi_dir)s/include
+#libraries            = mpi
+ library_dirs         = %(mpi_dir)s/lib64
+ runtime_library_dirs = %(library_dirs)s
+
+ python setup.py install --prefix=/usr/
+
+
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/mpi/gcc/openmpi/lib64/:/opt/intel/composerxe/mkl/lib/intel64/
+
