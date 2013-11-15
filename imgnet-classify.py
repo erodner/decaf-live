@@ -25,4 +25,5 @@ print "Classify image"
 
 for i in range(5):
   scores = net.classify(img)
-  print net.top_k_prediction(scores, 10)[1]
+  print "Okay"
+  #print net.top_k_prediction(scores, 10)[1]

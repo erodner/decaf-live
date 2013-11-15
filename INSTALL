@@ -21,3 +21,6 @@
 
  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/mpi/gcc/openmpi/lib64/:/opt/intel/composerxe/mkl/lib/intel64/
 
+
+ftp://ftp.pbone.net/mirror/ftp5.gwdg.de/pub/opensuse/repositories/home:/ykoba/openSUSE_12.1/x86_64/libatlas3-devel-3.9.35-4.1.x86_64.rpm
+ftp://ftp.pbone.net/mirror/ftp5.gwdg.de/pub/opensuse/repositories/home:/ykoba/openSUSE_12.1/x86_64/libatlas3-3.9.35-4.1.x86_64.rpm
