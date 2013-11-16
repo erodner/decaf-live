@@ -24,6 +24,6 @@ net = JeffNet(data_root+'imagenet.jeffnet.epoch90', data_root+'imagenet.jeffnet.
 print "Classify image"
 
 for i in range(5):
-  scores = net.classify(img)
+  scores = net.classify(img, center_only=True)
   print "Okay"
   #print net.top_k_prediction(scores, 10)[1]
