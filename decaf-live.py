@@ -55,8 +55,9 @@ def create_thumbnail_cache(synsets, timgsize, thumbdir):
   maxk = 3
   maxtries = 10
 
+  print "Loading thumbnails ..."
   for synset in synsets:
-    print "Caching thumbnails for synset %s" % (synset)
+    #print "Caching thumbnails for synset %s" % (synset)
     tryk = 0
     successk = 0
     while tryk < maxtries and successk < maxk:
@@ -67,7 +68,7 @@ def create_thumbnail_cache(synsets, timgsize, thumbdir):
         tryk = tryk + 1
         continue
       
-      print "Storing image %s %d: %s" % ( synset, successk, thumbfn )
+      #print "Storing image %s %d: %s" % ( synset, successk, thumbfn )
       
       successk = successk + 1
       tryk = tryk + 1
@@ -89,10 +90,11 @@ def display_thumbnails(synsets, woffset, wsize):
   timgsize = ( wsize[0] / 3, wsize[1] / 3 )
   for i in range(len(synsets)):
     synset = synsets[i]
-    for k in range( len(thumbnail_cache[synset]) ):
-        x = timgsize[0] * k + woffset[0] 
-        y = timgsize[1] * i + woffset[1]
-        screen.blit(thumbnail_cache[synset][k],(x,y))
+    if synset in thumbnail_cache:
+      for k in range( len(thumbnail_cache[synset]) ):
+          x = timgsize[0] * k + woffset[0] 
+          y = timgsize[1] * i + woffset[1]
+          screen.blit(thumbnail_cache[synset][k],(x,y))
 
 
 def display_results(synsets, scores, woffset, wsize):  
@@ -134,7 +136,7 @@ def classify_image():
       synsets = [ categories[d] for d in descs ]
       scores_reduced = [ scores[detections[0][k]] for k in synindices ]
       print "Reduced set (%d categories): " % (len(categories)), descs[0:5]
-      display_thumbnails( synsets, (0,camimg.shape[1]), (camimg.shape[0],camimg.shape[1]) )
+      display_thumbnails( synsets[0:3], (0,camimg.shape[1]), (camimg.shape[0],camimg.shape[1]) )
       display_results ( descs[0:3], scores_reduced[0:3], (camimg.shape[0],camimg.shape[1]), (camimg.shape[0],camimg.shape[1]) )
 
 
@@ -144,20 +146,6 @@ def classify_image():
 
 
 
-global thumbnail_cache
-thumbnail_cache = {}
-global categories
-categories = {}
-if args.categories:
-  categories = json.load( open( args.categories) )
-  # preload synset thumbnails
-  print "pre-downloading thumbnails ..."
-  for synset in categories.keys():
-    get_imagenet_thumbnail(synset, 6, verbose=True, overwrite=False, outputdir=args.thumbdir)
-  create_thumbnail_cache ( categories.keys(), (100,80), args.thumbdir )
-
-  # invert category map
-  categories = dict( (v,k) for k, v in categories.items() )
 
 data_root = args.modeldir
 requested_cam_size = (args.width,args.height)
@@ -187,6 +175,26 @@ if len(camlist) > 0:
   
   # get the camera size and setup up the window
   cam_size = cam.get_size()
+  
+  global thumbnail_cache
+  thumbnail_cache = {}
+  global categories
+  categories = {}
+  if args.categories:
+    categories = json.load( open( args.categories) )
+    # preload synset thumbnails
+    print "pre-downloading thumbnails ..."
+    for idx, synset in enumerate(categories):
+      print "%d/%d %s" % ( idx, len(categories), synset)
+      get_imagenet_thumbnail(synset, 6, verbose=True, overwrite=False, outputdir=args.thumbdir)
+    create_thumbnail_cache ( categories.keys(), (cam_size[0]/3, cam_size[1]/3), args.thumbdir )
+
+    # invert category map
+    categories = dict( (v,k) for k, v in categories.items() )
+
+
+
+  # open window
   global screen
   screen = pygame.display.set_mode( ( 2*cam_size[0], 2*cam_size[1] ), (pygame.RESIZABLE)   )
 
