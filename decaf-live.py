@@ -7,6 +7,7 @@ parser.add_argument( '--width', type=int, help='requested camera width', default
 parser.add_argument( '--height', type=int, help='requested camera height', default=256 )
 parser.add_argument( '-m', '--modeldir', help='directory with model file and meta information', default='/home/rodner/data/deeplearning/models/' )
 parser.add_argument( '--thumbdir', help='Directory with thumbnail images for the synsets', default='.' )
+parser.add_argument( '--downloadthumbs', help='Download non-existing thumbnail images', action='store_true')
 args = parser.parse_args()
 
 import sys
@@ -149,6 +150,7 @@ def classify_image():
 
 data_root = args.modeldir
 requested_cam_size = (args.width,args.height)
+enable_thumbnail_downloading = args.downloadthumbs
 
 # OpenGL support not yet implemented
 # gldrawPixels and the following command
@@ -184,9 +186,10 @@ if len(camlist) > 0:
     categories = json.load( open( args.categories) )
     # preload synset thumbnails
     print "pre-downloading thumbnails ..."
-    for idx, synset in enumerate(categories):
-      print "%d/%d %s" % ( idx, len(categories), synset)
-      get_imagenet_thumbnail(synset, 6, verbose=True, overwrite=False, outputdir=args.thumbdir)
+    if enable_thumbnail_downloading:
+      for idx, synset in enumerate(categories):
+        print "%d/%d %s" % ( idx, len(categories), synset)
+        get_imagenet_thumbnail(synset, 6, verbose=True, overwrite=False, outputdir=args.thumbdir)
     create_thumbnail_cache ( categories.keys(), (cam_size[0]/3, cam_size[1]/3), args.thumbdir )
 
     # invert category map
