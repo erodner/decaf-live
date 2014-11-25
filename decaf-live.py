@@ -8,18 +8,21 @@ parser.add_argument( '--height', type=int, help='requested camera height', defau
 parser.add_argument( '-m', '--modeldir', help='directory with model file and meta information', default='/home/rodner/data/deeplearning/models/' )
 parser.add_argument( '--thumbdir', help='Directory with thumbnail images for the synsets', default='.' )
 parser.add_argument( '--downloadthumbs', help='Download non-existing thumbnail images', action='store_true')
+parser.add_argument( '--threaded', help='Use classification thread', action='store_true')
+parser.add_argument( '--nocenteronly', help='Disable center-only classification mode', action='store_true', default=False)
 args = parser.parse_args()
 
 import sys
 import os
 import math
+import time
 import numpy as np
 import matplotlib.pyplot as pylab
 from decaf.scripts.jeffnet import JeffNet
 from decaf.util import smalldata
 import scipy.misc
+import functools
 
-import pygame.camera
 import pygame.image
 import pygame.surfarray
 
@@ -29,14 +32,11 @@ import json
 
 from get_imagenet_thumbnails import get_imagenet_thumbnail
 
+from Camera.Capture import Capture
 
 
 
-
-
-
-
-class ImageClassifier(threading.Thread):
+class SingleFunctionThread(threading.Thread):
   """ Class used for threading """
   
   def __init__(self, function_that_classifies):
@@ -117,20 +117,26 @@ def display_results(synsets, scores, woffset, wsize):
     screen.blit(label, (woffset[0], woffset[1] + i * rowsep + rowoffset ))
 
 
-def classify_image():
+def classify_image(center_only=True):
   """ Function realizing the classification """
   if capturing:
-    camimg = pygame.surfarray.array3d(img)
     screen.blit(img,(img.get_width(),0))
+    
+    camimg = np.transpose(pygame.surfarray.array3d(img), [1,0,2])
+
+    # test the conversion
+    #pylab.imsave('test.png', camimg)
 
     print "Classification (image: %d x %d)" % (camimg.shape[0], camimg.shape[1])
     print "\n"
-    scores = net.classify(camimg, center_only=True)
+    scores = net.classify(camimg, center_only=center_only)
     
+    print "Get top detections"
     detections = net.top_k_prediction(scores, len(scores))
     # indices do not match with synset ids!
     print "ImageNet guesses (1000 categories): ", detections[1][0:5]
     print "\n"
+    
     if categories:
       synindices = [ k for k in range(len(detections[1])) if detections[1][k] in categories ]
       descs = [ detections[1][k] for k in synindices ]
@@ -161,69 +167,73 @@ global net
 net = JeffNet(data_root+'imagenet.jeffnet.epoch90', data_root+'imagenet.jeffnet.meta')
 
 # pygame general initialization
-pygame.init()
+ret = pygame.init()
+print "PyGame result: ", ret
+print "PyGame driver: ", pygame.display.get_driver()
 
 # camera initialization
-pygame.camera.init()
-camlist = pygame.camera.list_cameras()
-if len(camlist) > 0:
-  # setting up the camera
-  print "-- List of cameras:"
-  print camlist
+#pygame.camera.init()
+#camlist = pygame.camera.list_cameras()
 
-  print "-- Selecting the first camera"
-  cam = pygame.camera.Camera(camlist[0], requested_cam_size)
-  cam.start()
-  
-  # get the camera size and setup up the window
-  cam_size = cam.get_size()
-  
-  global thumbnail_cache
-  thumbnail_cache = {}
-  global categories
-  categories = {}
-  if args.categories:
-    categories = json.load( open( args.categories) )
-    # preload synset thumbnails
-    print "pre-downloading thumbnails ..."
-    if enable_thumbnail_downloading:
-      for idx, synset in enumerate(categories):
-        print "%d/%d %s" % ( idx, len(categories), synset)
-        get_imagenet_thumbnail(synset, 6, verbose=True, overwrite=False, outputdir=args.thumbdir)
-    create_thumbnail_cache ( categories.keys(), (cam_size[0]/3, cam_size[1]/3), args.thumbdir )
+print "-- List of cameras:"
+print Capture.enumerateDevices()
 
-    # invert category map
-    categories = dict( (v,k) for k, v in categories.items() )
+print "-- Selecting the first camera"
+cam = Capture(index=0, requested_cam_size=requested_cam_size)
+
+# get the camera size and setup up the window
+#cam_size = cam.get_size()
+
+timg, width, height, orientation = cam.grabRawFrame()
+cam_size = (width, height)
+print "Video camera size: ", cam_size
+
+print "Initialize thumbnails"
+global thumbnail_cache
+thumbnail_cache = {}
+global categories
+categories = {}
+if args.categories:
+  categories = json.load( open( args.categories) )
+
+# preload synset thumbnails
+print "pre-downloading thumbnails ..."
+if enable_thumbnail_downloading:
+  for idx, synset in enumerate(categories):
+    print "%d/%d %s" % ( idx, len(categories), synset)
+    get_imagenet_thumbnail(synset, 6, verbose=True, overwrite=False, outputdir=args.thumbdir)
+create_thumbnail_cache ( categories.keys(), (cam_size[0]/3, cam_size[1]/3), args.thumbdir )
+
+# invert category map
+categories = dict( (v,k) for k, v in categories.items() )
 
 
 
-  # open window
-  global screen
-  screen = pygame.display.set_mode( ( 2*cam_size[0], 2*cam_size[1] ), (pygame.RESIZABLE)   )
+print "Initialize screen"
+# open window
+global screen
+screen = pygame.display.set_mode( ( 2*cam_size[0], 2*cam_size[1] ), (pygame.RESIZABLE)   )
 
-  # starting the threading
-  global img
-  global capturing
-  capturing = False
+# starting the threading
+global img
+global capturing
+capturing = True
 
-  thread = ImageClassifier(classify_image)
+if args.threaded:
+  print "Initialize thread"
+  thread = SingleFunctionThread(functools.partial(classify_image, not args.nocenteronly))
   thread.start()
-  
 
-  while True:
-    # print "Capture image ..."
-    img = cam.get_image()
+while True:
+  print "Capture image ..."
+  capturing = False
+  imgstring, w, h, orientation = cam.grabRawFrame()
+  img = pygame.image.fromstring(imgstring[::-1], (w,h), "RGB" )
+  img = pygame.transform.flip(img, True, True) 
+  capturing = True
 
-    capturing = True
+  if not args.threaded:
+    classify_image(center_only=(not args.nocenteronly))
 
-    # test the conversion
-    # pylab.imsave('test.png', camimg)
-
-    screen.blit(img,(0,0))
-    pygame.display.flip()
- 
-
-  pygame.camera.quit()
-
-else:
-  print "No camera found!"
+  screen.blit(img,(0,0))
+  pygame.display.flip()
