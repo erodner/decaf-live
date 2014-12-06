@@ -103,6 +103,7 @@ def display_results(synsets, scores, woffset, wsize):
   screen.fill ( (0,0,0), pygame.Rect(woffset[0], woffset[1], wsize[0], wsize[1]) ) 
 
   myfont = pygame.font.SysFont("monospace", 15)
+  myfont.set_bold(True)
   rowsep = int ( wsize[1] / len(synsets) )
   rowoffset = rowsep/2
 
