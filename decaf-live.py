@@ -10,6 +10,10 @@ parser.add_argument( '--thumbdir', help='Directory with thumbnail images for the
 parser.add_argument( '--downloadthumbs', help='Download non-existing thumbnail images', action='store_true')
 parser.add_argument( '--threaded', help='Use classification thread', action='store_true')
 parser.add_argument( '--nocenteronly', help='Disable center-only classification mode', action='store_true', default=False)
+parser.add_argument( '--offlinemode', help='download|decode|directory')
+parser.add_argument( '--url' )
+parser.add_argument( '--videofile' )
+parser.add_argument( '--videodir' )
 args = parser.parse_args()
 
 import sys
@@ -31,8 +35,6 @@ import threading
 import json
 
 from get_imagenet_thumbnails import get_imagenet_thumbnail
-
-from Camera.Capture import Capture
 
 
 
@@ -176,18 +178,26 @@ print "PyGame driver: ", pygame.display.get_driver()
 #pygame.camera.init()
 #camlist = pygame.camera.list_cameras()
 
-print "-- List of cameras:"
-print Capture.enumerateDevices()
 
-print "-- Selecting the first camera"
-cam = Capture(index=0, requested_cam_size=requested_cam_size)
 
-# get the camera size and setup up the window
-#cam_size = cam.get_size()
+if args.offlinemode:
+    from Camera.VideoCapture import Capture
+    print "-- Selecting the first camera"
+    cam = Capture(requested_cam_size=requested_cam_size, url=args.url, videodir=args.videodir, mode=args.offlinemode, videofile=args.videofile)
+else:
+    from Camera.Capture import Capture
+    print "-- List of cameras:"
+    print Capture.enumerateDevices()
+    cam = Capture(index=0, requested_cam_size=requested_cam_size)
+
 
 timg, width, height, orientation = cam.grabRawFrame()
 cam_size = (width, height)
 print "Video camera size: ", cam_size
+
+# get the camera size and setup up the window
+#cam_size = cam.get_size()
+
 
 print "Initialize thumbnails"
 global thumbnail_cache

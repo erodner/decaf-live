@@ -48,7 +48,6 @@ class Capture(object):
         
         result, cimg = self.capture.read() # cimg will represent the image as numpy array
         height, width, depth = cimg.shape
-        print cimg.shape
         return cimg.tostring(), width, height, 1
 
 
