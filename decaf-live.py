@@ -128,7 +128,7 @@ def classify_image(center_only=True):
     # test the conversion
     #pylab.imsave('test.png', camimg)
 
-    print "Classification (image: %d x %d)" % (camimg.shape[0], camimg.shape[1])
+    print "Classification (image: %d x %d)" % (camimg.shape[1], camimg.shape[0])
     print "\n"
     scores = net.classify(camimg, center_only=center_only)
     
@@ -144,8 +144,8 @@ def classify_image(center_only=True):
       synsets = [ categories[d] for d in descs ]
       scores_reduced = [ scores[detections[0][k]] for k in synindices ]
       print "Reduced set (%d categories): " % (len(categories)), descs[0:5]
-      display_thumbnails( synsets[0:3], (0,camimg.shape[1]), (camimg.shape[0],camimg.shape[1]) )
-      display_results ( descs[0:3], scores_reduced[0:3], (camimg.shape[0],camimg.shape[1]), (camimg.shape[0],camimg.shape[1]) )
+      display_thumbnails( synsets[0:3], (0,camimg.shape[0]), (camimg.shape[1],camimg.shape[0]) )
+      display_results ( descs[0:3], scores_reduced[0:3], (camimg.shape[1],camimg.shape[0]), (camimg.shape[1],camimg.shape[0]) )
 
 
 

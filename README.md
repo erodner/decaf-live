@@ -26,10 +26,8 @@ with the additional argument ``--downloadthumbs'', example images for ImageNet c
 shown during recognition.
 
 Command line arguments:
-
    usage: decaf-live.py [-h] [-c CATEGORIES] [--width WIDTH] [--height HEIGHT]
                      [-m MODELDIR] [--thumbdir THUMBDIR] [--downloadthumbs]
-
   optional arguments:
     -h, --help            show this help message and exit
     -c CATEGORIES, --categories CATEGORIES

@@ -24,8 +24,8 @@ class Capture(object):
         object.__init__(self)
         self.capture = cv2.VideoCapture()
         self.capture.open(index)
-        self.capture.set( cv2.cv.CV_CAP_PROP_FRAME_WIDTH, requested_cam_size[1] )
-        self.capture.set( cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, requested_cam_size[0] )
+        self.capture.set( cv2.cv.CV_CAP_PROP_FRAME_WIDTH, requested_cam_size[0] )
+        self.capture.set( cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, requested_cam_size[1] )
 
     def __del__(self):
         self.capture.release()
@@ -48,6 +48,7 @@ class Capture(object):
         
         result, cimg = self.capture.read() # cimg will represent the image as numpy array
         height, width, depth = cimg.shape
+        print cimg.shape
         return cimg.tostring(), width, height, 1
 
 
