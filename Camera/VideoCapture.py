@@ -2,36 +2,37 @@
 
 The Capture class provided from this module uses mplayer to decode a movie.
 
-Author: Bjoern Barz
+Author: Erik Rodner (adapted from an earlier version of Bjoern Barz)
 """
 
+import logging
 import cv2
+import numpy as np
 from PIL import Image
 import VideoTools
-from scipy.misc import imread
+from scipy.misc import imread, imresize
 import glob
 
 class Capture(object):
     """Provides access to video devices."""
 
     def __init__(self, mode, requested_cam_size=(640,480), url=None, videodir=None, videofile=None):
-
+        
+        self.requested_cam_size = requested_cam_size
         if mode=='download':
             if url:
                 videofile, videolength = VideoTools.download_video( url )
-                mode = 'decode'
+                self.frames = VideoTools.decode_video(videofile, videolength)
             else:
                 raise Exception("url unspecified")
-        else:
+        elif mode=='decode':
             if videofile:
                 videolength = VideoTools.get_video_length(videofile)
-                mode = 'decode'
+                logging.info("The length of the video is: {0}".format(videolength))
+                self.frames = VideoTools.decode_video(videofile, videolength)
             else:
                 raise Exception("videofile unspecified")
-
-        if mode=='decode':
-            self.frames = VideoTools.decode_video(videofile, videolength)
-        else:
+        else: 
             if videodir:
                 self.frames = glob.glob("%s/*.png" % (videodir))
             else:
@@ -58,13 +59,16 @@ class Capture(object):
         1 (top-to-bottom) or -1 (bottom-to-top).
         """
         
-        result, cimg = self.capture.read() # cimg will represent the image as numpy array
-        cimg = imread( self.frames[self.currentFrame] )
+        imgfn = self.frames[self.currentFrame]
+        logging.info("Current frame: {0}".format(imgfn))
+        cimg = imresize( imread(imgfn), size=( self.requested_cam_size[1], self.requested_cam_size[0] ) )
         height, width, depth = cimg.shape
         
         if self.currentFrame < len(self.frames)-1:
             self.currentFrame = self.currentFrame + 1
-
+        
+        # convert RGB to BGR :) 
+        cimg = cimg[:,:,::-1]
         return cimg.tostring(), width, height, 1
 
 

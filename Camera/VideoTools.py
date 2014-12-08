@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import glob
+import logging
 
 """ downloads a youtube video using pafy and returns the filename and the length of the 
     video in seconds """
@@ -18,8 +19,8 @@ def download_video (url, videofile=None, tmproot=None):
         os.close(tempvideofile)
 
     video = pafy.new(url)
-    print video.title
-    print "Duration: ", video.duration
+    logging.info( video.title )
+    logging.info( "Duration: {0}".format(video.duration) )
 
     # now, get the length in seconds, which will be important later on for
     # decoding
@@ -28,18 +29,18 @@ def download_video (url, videofile=None, tmproot=None):
     total_seconds = 0
     for t in times_arr:
         total_seconds = 60*total_seconds + int(t)
-    print "Duration in seconds: ", total_seconds
+    logging.debug("Duration in seconds: {0}".format(total_seconds))
 
     # best = video.getbest()
 
     # display all possible streams
-    print "Possible video streams:"
+    logging.debug("Possible video streams:")
     for s in video.streams:
-        print(s)
+        logging.debug(s)
 
     best = video.getbest(preftype="flv")
 
-    print "Downloading the %s video from %s" % (best.resolution, best.url)
+    logging.info("Downloading the {0} video of {1} to {2}" % (best.resolution, url, videofile))
 
     best.download(quiet=False, filepath=videofile)
 
@@ -55,7 +56,7 @@ def decode_video (videofile, videolength, videotmpdir = None):
     if videotmpdir is None:
         videotmpdir = os.path.dirname(videofile)
     
-    print "Decoding the video with mplayer and storing the images in %s" % (videotmpdir)
+    logging.info("Decoding the video with mplayer and storing the images in %s" % (videotmpdir))
     currentdir = os.getcwd()
     try:
         os.chdir( videotmpdir )
@@ -67,13 +68,14 @@ def decode_video (videofile, videolength, videotmpdir = None):
 
 def get_video_length(videofile):
     # parse for ID_LENGTH 
-    mplayeridentifyout = subprocess.check_output( ["mplayer", "-identify", "-frames", "0", videofile] )
+    mplayer_command = ["mplayer", "-identify", "-frames", "0",videofile]
+    mplayeridentifyout = subprocess.check_output( mplayer_command )
     lines = mplayeridentifyout.rsplit('\n')
     for line in lines:
-        m = re.match("ID_LENGTH=(\d\.)", line)
+        m = re.match("ID_LENGTH=([\d\.]+)", line)
         if m:
             timelength = float(m.group(1))
             return timelength
 
-    Exception("Unable to obtain the video length with mplayer")
+    raise Exception("Unable to obtain the video length with mplayer: " + " ".join(mplayer_command))
     return 0
