@@ -1,6 +1,7 @@
 import sys
 import os
 import urllib2
+import logging
 
 import scipy.misc
 
@@ -19,7 +20,7 @@ def get_imagenet_thumbnail(wnid, k, verbose=False, overwrite=True, outputdir='.'
     
     if thumbnails_available:
       if verbose:
-        print "Thumbnails are already available for %s" % (wnid)
+        logging.info( "Thumbnails are already available for %s" % (wnid) )
       return
 
 
@@ -31,12 +32,12 @@ def get_imagenet_thumbnail(wnid, k, verbose=False, overwrite=True, outputdir='.'
   while ini < len(urllist) and outi < k:
     imgurl = urllist[ini].rstrip()
     if verbose:
-      print "Thumbnail URL: %s" % (imgurl)
+      logging.info( "Thumbnail URL: %s" % (imgurl) )
     imgfn = imgfntemplate % (wnid, outi)
     ini = ini + 1
       
     if not overwrite and os.path.isfile(imgfn):
-      print "Thumbnail %s already available" % (imgfn)
+      logging.info( "Thumbnail %s already available" % (imgfn) )
       continue
 
     try:
@@ -48,13 +49,13 @@ def get_imagenet_thumbnail(wnid, k, verbose=False, overwrite=True, outputdir='.'
       scipy.misc.imread( imgfn )
       outi = outi + 1
     except:
-      print "Error: Unable to download image from %s ... skipping" % (imgurl)
+      logging.error("Error: Unable to download image from %s ... skipping" % (imgurl))
       # clean up to avoid errors with the overwrite=False setting
       os.remove( imgfn )
       continue
 
     if verbose:
-      print "Thumbnail %s downloaded" % (imgfn)
+      logging.info("Thumbnail %s downloaded" % (imgfn))
 
 
 

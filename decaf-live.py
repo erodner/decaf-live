@@ -15,7 +15,9 @@ parser.add_argument( '--url', help='youtube video that will be downloaded in off
 parser.add_argument( '--videofile', help='video file that will be processed in offline mode' )
 parser.add_argument( '--videodir', help='directory with PNG files that will be processed in offline mode' )
 parser.add_argument( '--loglevel', help='log level', choices=['debug','info','warning','error','critical'], default='info')
-parser.add_argument(' --delay', help='delay (0=no delay, negative value=button wait, positive value=milliseconds to wait)', type=int, default=0)
+parser.add_argument( '--delay', help='delay (0=no delay, negative value=button wait, positive value=milliseconds to wait)', type=float, default=0)
+parser.add_argument( '--pooling', help='type of pooling used', choices=['avg', 'none', 'max'], default='none' )
+parser.add_argument( '--poolingsize', help='pooling size', type=int, default=100 )
 args = parser.parse_args()
 
 import logging
@@ -61,9 +63,8 @@ class SingleFunctionThread(threading.Thread):
 
 
 
+""" load, rescale, and store thumbnail images """
 def create_thumbnail_cache(synsets, timgsize, thumbdir):
-  """ load, rescale, and stote thumbnail images """
-
   maxk = 3
   maxtries = 10
 
@@ -93,20 +94,17 @@ def create_thumbnail_cache(synsets, timgsize, thumbdir):
 
   
 
-
-def display_thumbnails(synsets, woffset, wsize):  
-
+""" given a list of synsets, display the thumbnails """
+def display_thumbnails(synsets, woffset, wsize, numthumbnails=3):  
   screen.fill ( (0,0,0), pygame.Rect(woffset[0], woffset[1], wsize[0], wsize[1]) ) 
-  maxk = 10
-  maxtries = 10
-  timgsize = ( wsize[0] / 3, wsize[1] / 3 )
+  timgsize = ( wsize[0] / len(synsets), wsize[1] / numthumbnails )
   for i in range(len(synsets)):
     synset = synsets[i]
     if synset in thumbnail_cache:
       for k in range( len(thumbnail_cache[synset]) ):
-          x = timgsize[0] * k + woffset[0] 
-          y = timgsize[1] * i + woffset[1]
-          screen.blit(thumbnail_cache[synset][k],(x,y))
+          y = timgsize[0] * k + woffset[0] 
+          x = timgsize[1] * i + woffset[1]
+          screen.blit(thumbnail_cache[synset][k],(y,x))
 
 
 def display_results(synsets, scores, woffset, wsize):  
@@ -128,12 +126,12 @@ def display_results(synsets, scores, woffset, wsize):
     label = myfont.render(text, 1, (255,0,0), (0,0,0) )
     screen.blit(label, (woffset[0], woffset[1] + i * rowsep + rowoffset ))
 
-
+""" classify the image, over and over again """
 def classify_image(center_only=True):
-  """ Function realizing the classification """
   if capturing:
     screen.blit(img,(img.get_width(),0))
-    
+   
+    # transpose image :)
     camimg = np.transpose(pygame.surfarray.array3d(img), [1,0,2])
 
     # test the conversion
@@ -141,19 +139,51 @@ def classify_image(center_only=True):
 
     logging.info("Classification (image: %d x %d)" % (camimg.shape[1], camimg.shape[0]))
     scores = net.classify(camimg, center_only=center_only)
-    
+ 
+    if pooling!='none':
+      all_scores.append(scores)
+        
+      if len(all_scores)>pooling_size:
+        all_scores.pop(0)
+
+      logging.debug("Pool size: {0}".format(len(all_scores)))
+
+      pooled_scores = all_scores[0]
+      if pooling=='avg':
+        for s in all_scores[1:]:
+          pooled_scores = np.add( pooled_scores, s )
+        pooled_scores = pooled_scores / len(all_scores)
+      else:
+        for s in all_scores[1:]:
+          pooled_scores = np.fmax( pooled_scores, s )
+
+      scores = pooled_scores
+   
     detections = net.top_k_prediction(scores, len(scores))
-    # indices do not match with synset ids!
     logging.info("ImageNet guesses (1000 categories): {0}".format(detections[1][0:5]))
     
     if categories:
       synindices = [ k for k in range(len(detections[1])) if detections[1][k] in categories ]
-      descs = [ detections[1][k] for k in synindices ]
-      synsets = [ categories[d] for d in descs ]
+      descs_reduced = [ detections[1][k] for k in synindices ]
+      synsets_reduced = [ categories[d] for d in descs_reduced ]
       scores_reduced = [ scores[detections[0][k]] for k in synindices ]
-      logging.info("Reduced set ({0} categories): {1}".format(len(categories), descs[0:5]))
-      display_thumbnails( synsets[0:3], (0,camimg.shape[0]), (camimg.shape[1],camimg.shape[0]) )
-      display_results ( descs[0:3], scores_reduced[0:3], (camimg.shape[1],camimg.shape[0]), (camimg.shape[1],camimg.shape[0]) )
+
+      display_scores = scores_reduced
+      display_descs = descs_reduced
+      display_synsets = synsets_reduced
+
+
+      logging.info("Reduced set ({0} categories): {1}".format(len(categories), descs_reduced[0:5]))
+
+    else:
+      display_scores = scores
+      display_descs = detections[1]
+      display_synsets = detections[2]
+
+
+    imgsize = (camimg.shape[1],camimg.shape[0])
+    display_thumbnails( display_synsets[0:3], (0,camimg.shape[0]), imgsize )
+    display_results ( display_descs[0:3], scores_reduced[0:3], imgsize, imgsize )
 
 
 
@@ -185,30 +215,37 @@ if args.offlinemode:
     from Camera.VideoCapture import Capture
     logging.info("Selecting the first camera")
     cam = Capture(requested_cam_size=requested_cam_size, url=args.url, videodir=args.videodir, mode=args.offlinemode, videofile=args.videofile)
+    cam_size = requested_cam_size
 else:
     from Camera.Capture import Capture
     logging.info("List of cameras:")
     logging.info(Capture.enumerateDevices())
     cam = Capture(index=0, requested_cam_size=requested_cam_size)
+    timg, width, height, orientation = cam.grabRawFrame()
+    cam_size = (width, height)
+    logging.info("Video camera size: {0}".format(cam_size))
+
+# pooling settings
+global all_scores
+all_scores = []
+pooling = args.pooling
+pooling_size = args.poolingsize
 
 
-timg, width, height, orientation = cam.grabRawFrame()
-cam_size = (width, height)
-logging.info("Video camera size: {0}".format(cam_size))
 
-# get the camera size and setup up the window
-#cam_size = cam.get_size()
-
-
-logging.debug("Initialize thumbnails")
-global thumbnail_cache
-thumbnail_cache = {}
+# load categories
 global categories
 categories = {}
 if args.categories:
   categories = json.load( open( args.categories) )
 
+
+
 # preload synset thumbnails
+logging.debug("Initialize thumbnails")
+global thumbnail_cache
+thumbnail_cache = {}
+
 logging.debug("Pre-downloading thumbnails")
 if enable_thumbnail_downloading:
   for idx, synset in enumerate(categories):
@@ -249,3 +286,6 @@ while True:
 
   screen.blit(img,(0,0))
   pygame.display.flip()
+  
+  if args.delay>0:
+      time.sleep(args.delay)

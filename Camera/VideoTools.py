@@ -40,7 +40,7 @@ def download_video (url, videofile=None, tmproot=None):
 
     best = video.getbest(preftype="flv")
 
-    logging.info("Downloading the {0} video of {1} to {2}" % (best.resolution, url, videofile))
+    logging.info("Downloading the {0} video of {1} to {2}".format(best.resolution, url, videofile))
 
     best.download(quiet=False, filepath=videofile)
 
@@ -51,7 +51,7 @@ def download_video (url, videofile=None, tmproot=None):
 def decode_video (videofile, videolength, videotmpdir = None):
 
     # Unfortunately, due to a mysterious bug in mplayer, we have to specify the end position
-    mplayer_command = [ 'mplayer', '-vo', 'png:z=9:prefix=y2b', '-nosound', '-sstep', '1', '-endpos', "%d" % (videolength-2), videofile ]
+    mplayer_command = [ 'mplayer', '-vo', 'png:z=9:prefix=y2b', '-nosound', '-endpos', "%d" % (videolength-2), videofile ]
 
     if videotmpdir is None:
         videotmpdir = os.path.dirname(videofile)
