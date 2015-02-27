@@ -273,19 +273,42 @@ if args.threaded:
   thread = SingleFunctionThread(functools.partial(classify_image, not args.nocenteronly))
   thread.start()
 
+if args.delay>0:
+  pygame.time.set_timer(pygame.USEREVENT + 1, int(args.delay*1000))
+
+running = True
 while True:
-  logging.debug("Capture image")
-  capturing = False
-  imgstring, w, h, orientation = cam.grabRawFrame()
-  img = pygame.image.fromstring(imgstring[::-1], (w,h), "RGB" )
-  img = pygame.transform.flip(img, True, True) 
-  capturing = True
+  if running:
+    logging.debug("Capture image")
+    capturing = False
+    imgstring, w, h, orientation = cam.grabRawFrame()
+    img = pygame.image.fromstring(imgstring[::-1], (w,h), "RGB" )
+    img = pygame.transform.flip(img, True, True) 
+    capturing = True
 
-  if not args.threaded:
-    classify_image(center_only=(not args.nocenteronly))
+    if not args.threaded:
+      classify_image(center_only=(not args.nocenteronly))
 
-  screen.blit(img,(0,0))
-  pygame.display.flip()
-  
-  if args.delay>0:
-      time.sleep(args.delay)
+    screen.blit(img,(0,0))
+    pygame.display.flip()
+ 
+
+  blocking = True
+  while blocking:
+    for event in pygame.event.get(): 
+      if event.type==pygame.QUIT:sys.exit()
+      if event.type==pygame.KEYDOWN and event.key==pygame.K_SPACE: 
+        logging.debug("Setting running flag to: {0}".format(running))
+        running = not running     
+        pygame.event.clear(pygame.KEYUP)
+        pygame.event.clear(pygame.KEYDOWN)
+      if event.type==pygame.KEYDOWN and event.key==pygame.K_q:
+          sys.exit()
+      if event.type==pygame.USEREVENT+1:
+        blocking = False
+
+    if args.delay==0:
+      blocking = False
+
+#  if args.delay>0:
+#   time.sleep(args.delay)
