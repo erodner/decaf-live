@@ -51,7 +51,7 @@ from get_imagenet_thumbnails import get_imagenet_thumbnail
 
 class SingleFunctionThread(threading.Thread):
   """ Class used for threading """
-  
+
   def __init__(self, function_that_classifies):
     threading.Thread.__init__(self)
     self.runnable = function_that_classifies
@@ -80,38 +80,38 @@ def create_thumbnail_cache(synsets, timgsize, thumbdir):
       except:
         tryk = tryk + 1
         continue
-      
+
       logging.debug("Storing image %s %d: %s" % ( synset, successk, thumbfn ))
-      
+
       successk = successk + 1
       tryk = tryk + 1
-      
+
       timg = pygame.transform.scale ( timgbig, timgsize )
       if not synset in thumbnail_cache:
-        thumbnail_cache[synset] = []  
+        thumbnail_cache[synset] = []
       thumbnail_cache[synset].append(timg)
-  
 
-  
+
+
 
 """ given a list of synsets, display the thumbnails """
-def display_thumbnails(synsets, woffset, wsize, numthumbnails=3):  
-  screen.fill ( (0,0,0), pygame.Rect(woffset[0], woffset[1], wsize[0], wsize[1]) ) 
+def display_thumbnails(synsets, woffset, wsize, numthumbnails=3):
+  screen.fill ( (0,0,0), pygame.Rect(woffset[0], woffset[1], wsize[0], wsize[1]) )
   timgsize = ( wsize[0] / len(synsets), wsize[1] / numthumbnails )
   for i in range(len(synsets)):
     synset = synsets[i]
     if synset in thumbnail_cache:
       for k in range( len(thumbnail_cache[synset]) ):
-          y = timgsize[0] * k + woffset[0] 
+          y = timgsize[0] * k + woffset[0]
           x = timgsize[1] * i + woffset[1]
           screen.blit(thumbnail_cache[synset][k],(y,x))
 
 
-def display_results(synsets, scores, woffset, wsize):  
+def display_results(synsets, scores, woffset, wsize):
   # delete previous area
-  screen.fill ( (0,0,0), pygame.Rect(woffset[0], woffset[1], wsize[0], wsize[1]) ) 
+  screen.fill ( (0,0,0), pygame.Rect(woffset[0], woffset[1], wsize[0], wsize[1]) )
 
-  myfont = pygame.font.SysFont("monospace", 15)
+  myfont = pygame.font.SysFont("monospace", 20)
   myfont.set_bold(True)
   rowsep = int ( wsize[1] / len(synsets) )
   rowoffset = rowsep/2
@@ -130,7 +130,7 @@ def display_results(synsets, scores, woffset, wsize):
 def classify_image(center_only=True):
   if capturing:
     screen.blit(img,(img.get_width(),0))
-   
+
     # transpose image :)
     camimg = np.transpose(pygame.surfarray.array3d(img), [1,0,2])
 
@@ -139,10 +139,10 @@ def classify_image(center_only=True):
 
     logging.info("Classification (image: %d x %d)" % (camimg.shape[1], camimg.shape[0]))
     scores = net.classify(camimg, center_only=center_only)
- 
+
     if pooling!='none':
       all_scores.append(scores)
-        
+
       if len(all_scores)>pooling_size:
         all_scores.pop(0)
 
@@ -158,10 +158,10 @@ def classify_image(center_only=True):
           pooled_scores = np.fmax( pooled_scores, s )
 
       scores = pooled_scores
-   
+
     detections = net.top_k_prediction(scores, len(scores))
     logging.info("ImageNet guesses (1000 categories): {0}".format(detections[1][0:5]))
-    
+
     if categories:
       synindices = [ k for k in range(len(detections[1])) if detections[1][k] in categories ]
       descs_reduced = [ detections[1][k] for k in synindices ]
@@ -283,7 +283,7 @@ while True:
     capturing = False
     imgstring, w, h, orientation = cam.grabRawFrame()
     img = pygame.image.fromstring(imgstring[::-1], (w,h), "RGB" )
-    img = pygame.transform.flip(img, True, True) 
+    img = pygame.transform.flip(img, True, True)
     capturing = True
 
     if not args.threaded:
@@ -291,15 +291,15 @@ while True:
 
     screen.blit(img,(0,0))
     pygame.display.flip()
- 
+
 
   blocking = True
   while blocking:
-    for event in pygame.event.get(): 
+    for event in pygame.event.get():
       if event.type==pygame.QUIT:sys.exit()
-      if event.type==pygame.KEYDOWN and event.key==pygame.K_SPACE: 
+      if event.type==pygame.KEYDOWN and event.key==pygame.K_SPACE:
         logging.debug("Setting running flag to: {0}".format(running))
-        running = not running     
+        running = not running
         pygame.event.clear(pygame.KEYUP)
         pygame.event.clear(pygame.KEYDOWN)
       if event.type==pygame.KEYDOWN and event.key==pygame.K_q:
